@@ -24,7 +24,7 @@ namespace PDBDumpWV
             off = StreamHelper.ReadU32(s);
             seg = StreamHelper.ReadU16(s);
             name = StreamHelper.ReadCString(s);
-            while (s.Position - pos < reclen)
+            while (s.Position - pos < reclen && s.Position < s.Length)
                 s.ReadByte();
         }
 

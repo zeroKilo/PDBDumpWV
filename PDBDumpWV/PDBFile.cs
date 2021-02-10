@@ -49,19 +49,25 @@ namespace PDBDumpWV
             pAdIndexPages = StreamHelper.ReadU32(raw);
             raw.Seek(pAdIndexPages * dPageBytes, 0);
             List<uint> pages = new List<uint>();
-            while (raw.Position < pAdIndexPages * dPageBytes + dRootBytes)
+            uint count = dRootBytes / dPageBytes;
+            if ((dRootBytes / dPageBytes) != 0)
+                count++;
+            for (int i = 0; i < count; i++)
             {
                 uint u = StreamHelper.ReadU32(raw);
                 if (u != 0)
                     pages.Add(u);
-                else
-                    break;
             }
             adIndexPages = pages.ToArray();
+            Console.WriteLine("Reading root streams...");
             ReadRootStreams();
+            Console.WriteLine("Reading global name table...");
             ReadGlobalNameTable();
+            Console.WriteLine("Reading TPI stream...");
             ReadTPIStream();
+            Console.WriteLine("Reading debug info streams...");
             ReadDebugInfoStream();
+            Console.WriteLine("Reading symbol record streams...");
             ReadSymbolRecordStream();
         }
 
@@ -145,7 +151,10 @@ namespace PDBDumpWV
         {
             MemoryStream m = new MemoryStream();
             foreach (uint page in rs.pages)
-                CopyPage(page, raw, m);
+                if ((int)page == -1)
+                    break;
+                else
+                    CopyPage(page, raw, m);
             byte[] data = new byte[rs.size];
             m.Seek(0, 0);
             m.Read(data, 0, (int)rs.size);

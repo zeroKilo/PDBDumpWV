@@ -46,7 +46,7 @@ namespace PDBDumpWV
                         u2 = StreamHelper.ReadU16(s);
                         u3 = StreamHelper.ReadU16(s);
                         u4 = StreamHelper.ReadU16(s);
-                        if((u2 & 0x10) != 0)
+                        if((u2 & 0x10) != 0 && u2 != 0x16)
                             u5 = StreamHelper.ReadU32(s);
                         name = StreamHelper.ReadCString(s);
                         break;
