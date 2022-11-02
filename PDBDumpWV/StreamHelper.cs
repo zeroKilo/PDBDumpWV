@@ -123,6 +123,13 @@ namespace PDBDumpWV
             return sb.ToString();
         }
 
+        public static byte[] ReadFixedBuffer(Stream s, int len)
+        {
+            byte[] result = new byte[len];
+            s.Read(result, 0, len);
+            return result;
+        }
+
         public static void WriteFixedString(Stream s, string v)
         {
             foreach (char c in v)

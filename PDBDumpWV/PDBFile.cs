@@ -143,8 +143,17 @@ namespace PDBDumpWV
         {
             MemoryStream m = new MemoryStream(GetStreamData(rootStreams[dbi.SymRecordStream]));
             long len = m.Length;
+            int count = 0;
             while (m.Position < len)
+            {
                 symbols.Add(new SymbolRecord(m));
+                if ((count++ % 10000) == 0)
+                {
+                    float f = m.Position / (float)len;
+                    f *= 100f;
+                    Console.Write((int)f + "%\r");
+                }
+            }
         }
 
         public byte[] GetStreamData(RootStream rs)

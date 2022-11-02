@@ -23,6 +23,9 @@ namespace PDBDumpWV
                 sb.AppendLine("Stream " + i.ToString("D4") + " = " + pdb.rootStreams[i].name1);
                 sb.AppendLine("            = " + pdb.rootStreams[i].name2);
                 File.WriteAllBytes("output\\Streams\\Stream" + i.ToString("D4") + ".bin", pdb.GetStreamData(pdb.rootStreams[i]));
+                float f = i / (float)pdb.rootStreams.Length;
+                f *= 100f;
+                Console.Write((int)f + "%\r");
             }
             Console.WriteLine("Writing stream name map...");
             File.WriteAllText("output\\StreamNameMap.txt", sb.ToString());
@@ -31,14 +34,17 @@ namespace PDBDumpWV
             sb = new StringBuilder();
             for (int i = 0; i < pdb.tpi.records.Count; i++)
             {
-                sb.Append(pdb.tpi.records[i].ToString());
+                sb.Append(pdb.tpi.records[i].MakeString(i + 0x1000));
                 if ((i % 10000) == 0)
                 {
-                    File.AppendAllText("output\\TypeInfo.txt", sb.ToString(), Encoding.ASCII);
-                    sb = new StringBuilder();
+                    File.AppendAllText("output\\TypeInfo.txt", sb.ToString());
+                    sb = new StringBuilder(); 
+                    float f = i / (float)pdb.tpi.records.Count;
+                    f *= 100f;
+                    Console.Write((int)f + "%\r");
                 }
             }
-            File.AppendAllText("output\\TypeInfo.txt", sb.ToString(), Encoding.ASCII);
+            File.AppendAllText("output\\TypeInfo.txt", sb.ToString());
             sb = new StringBuilder();
             Console.WriteLine("Writing symbol records...");
             foreach (SymbolRecord sym in pdb.symbols)
