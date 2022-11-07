@@ -215,16 +215,28 @@ namespace PDBDumpWV
 
         public class Property
         {
-            public bool fwdref;
-            public bool opcast;
-            public bool opassign;
-            public bool cnested;
-            public bool isnested;
-            public bool ovlops;
-            public bool ctor;
+            public enum MOCOM_UDT
+            {
+                CV_MOCOM_UDT_none = 0,
+                CV_MOCOM_UDT_ref = 1,
+                CV_MOCOM_UDT_value = 2,
+                CV_MOCOM_UDT_interface = 3
+            }            
             public bool packed;
-            public bool reserved;
+            public bool ctor;
+            public bool ovlops;
+            public bool isnested;
+            public bool cnested;
+            public bool opassign;
+            public bool opcast;
+            public bool fwdref;
             public bool scoped;
+            public bool hasuniquename;
+            public bool issealed;
+            public bool hfa;
+            public bool intrinsic;
+            public MOCOM_UDT udt;
+            public bool reserved;
             public ushort _raw;
 
             public Property(ushort u)
@@ -239,22 +251,32 @@ namespace PDBDumpWV
                 opcast = Helper.GetBits(u, 6, 1) != 0;
                 fwdref = Helper.GetBits(u, 7, 1) != 0;
                 scoped = Helper.GetBits(u, 8, 1) != 0;
-                reserved = Helper.GetBits(u, 9, 7) != 0;
+                hasuniquename = Helper.GetBits(u, 9, 1) != 0;
+                issealed = Helper.GetBits(u, 10, 1) != 0;
+                hfa = Helper.GetBits(u, 11, 1) != 0;
+                intrinsic = Helper.GetBits(u, 12, 1) != 0;
+                udt = (MOCOM_UDT)Helper.GetBits(u, 13, 2);
+                reserved = Helper.GetBits(u, 15, 1) != 0;
             }
 
             public override string ToString()
             {
                 return _raw.ToString("X4") + " " + //Convert.ToString(_raw, 2).PadLeft(16, '0') + "b " +
-                       (fwdref ? "fwdref " : "") +
-                       (opcast ? "opcast " : "") +
-                       (opassign ? "opassign " : "") +
-                       (cnested ? "cnested " : "") +
-                       (isnested ? "isnested " : "") +
-                       (ovlops ? "ovlops " : "") +
-                       (ctor ? "ctor " : "") +
                        (packed ? "packed " : "") +
-                       (reserved ? "reserved " : "") +
-                       (scoped ? "scoped " : "");
+                       (ctor ? "ctor " : "") +
+                       (ovlops ? "ovlops " : "") +
+                       (isnested ? "isnested " : "") +
+                       (cnested ? "cnested " : "") +
+                       (opassign ? "opassign " : "") +
+                       (opcast ? "opcast " : "") +
+                       (fwdref ? "fwdref " : "") +
+                       (scoped ? "scoped " : "") +
+                       (hasuniquename ? "hasuniquename " : "") +
+                       (issealed ? "issealed " : "") +
+                       (hfa ? "hfa " : "") +
+                       (intrinsic ? "intrinsic " : "") +
+                       (udt + " ") +
+                       (reserved ? "reserved " : "");
             }
         }
 
@@ -276,7 +298,7 @@ namespace PDBDumpWV
                 return Helper.MakeTabs(tabs) + "LF_ENUMERATE @0x" + _offset.ToString("X8") + " : "
                        + "attr = [" + attr + "] "
                        + "value = " + Helper.MakeHexString(value.data) + " "
-                       + name;
+                       + "name = \"" + name + "\"";
             }
         }
 
@@ -576,6 +598,7 @@ namespace PDBDumpWV
             public uint utype;
             public uint field;
             public string name;
+            public string uniquename;
             public LR_Enum(byte[] raw)
             {
                 MemoryStream s = new MemoryStream(raw);
@@ -584,15 +607,21 @@ namespace PDBDumpWV
                 utype = StreamHelper.ReadU32(s);
                 field = StreamHelper.ReadU32(s);
                 name = StreamHelper.ReadCString(s);
+                if (property.hasuniquename)
+                    uniquename = StreamHelper.ReadCString(s);
             }
             public override string Dump(int tabs = 0)
             {
                 StringBuilder sb = new StringBuilder();
-                sb.AppendLine(Helper.MakeTabs(tabs + 1) + "Count = " + count +
+                sb.Append(Helper.MakeTabs(tabs + 1) + "Count = " + count +
                           " property: [" + property + "]" +
                           " utype: 0x" + utype.ToString("X8") +
                           " field: 0x" + field.ToString("X8") +
-                          " " + name);
+                          " name: \"" + name + "\"");
+                if (property.hasuniquename)
+                    sb.AppendLine(" uniquename:\"" + uniquename + "\"");
+                else
+                    sb.AppendLine();
                 return sb.ToString();
             }
         }
@@ -606,6 +635,7 @@ namespace PDBDumpWV
             public uint vshape;
             public Value data;
             public string name;
+            public string uniqueName;
             public LR_Structure(byte[] raw)
             {
                 MemoryStream s = new MemoryStream(raw);
@@ -616,17 +646,23 @@ namespace PDBDumpWV
                 vshape = StreamHelper.ReadU32(s);
                 data = new Value(s);
                 name = StreamHelper.ReadCString(s);
+                if (property.hasuniquename)
+                    uniqueName = StreamHelper.ReadCString(s);
             }
             public override string Dump(int tabs = 0)
             {
                 StringBuilder sb = new StringBuilder();
-                sb.AppendLine(Helper.MakeTabs(tabs + 1) + "Count = " + count +
+                sb.Append(Helper.MakeTabs(tabs + 1) + "Count = " + count +
                           " property: [" + property + "]" +
                           " field: 0x" + field.ToString("X8") +
                           " derived: 0x" + derived.ToString("X8") +
                           " vshape: 0x" + derived.ToString("X8") +
                           " data: " + Helper.MakeHexString(data.data) +
-                          " " + name);
+                          " name: \"" + name + "\"");
+                if (property.hasuniquename)
+                    sb.AppendLine(" uniquename:\"" + uniqueName + "\"");
+                else
+                    sb.AppendLine();
                 return sb.ToString();
             }
         }
@@ -659,6 +695,7 @@ namespace PDBDumpWV
             public uint field;
             public Value data;
             public string name;
+            public string uniqueName;
             public LR_Union(byte[] raw)
             {
                 MemoryStream s = new MemoryStream(raw);
@@ -667,15 +704,21 @@ namespace PDBDumpWV
                 field = StreamHelper.ReadU32(s);
                 data = new Value(s);
                 name = StreamHelper.ReadCString(s);
+                if(property.hasuniquename)
+                    uniqueName = StreamHelper.ReadCString(s);
             }
             public override string Dump(int tabs = 0)
             {
                 StringBuilder sb = new StringBuilder();
-                sb.AppendLine(Helper.MakeTabs(tabs + 1) + "Count = " + count +
+                sb.Append(Helper.MakeTabs(tabs + 1) + "Count = " + count +
                           " property: [" + property + "]" +
                           " field: 0x" + field.ToString("X8") +
                           " data: " + Helper.MakeHexString(data.data) +
-                          " " + name);
+                          " name: \"" + name + "\"");
+                if (property.hasuniquename)
+                    sb.AppendLine(" uniquename:\"" + uniqueName + "\"");
+                else
+                    sb.AppendLine();
                 return sb.ToString();
             }
         }
@@ -714,6 +757,7 @@ namespace PDBDumpWV
             public uint vshape;
             public Value data;
             public string name;
+            public string uniqueName;
             public LR_Class(byte[] raw)
             {
                 MemoryStream s = new MemoryStream(raw);
@@ -724,17 +768,23 @@ namespace PDBDumpWV
                 vshape = StreamHelper.ReadU32(s);
                 data = new Value(s);
                 name = StreamHelper.ReadCString(s);
+                if (property.hasuniquename)
+                    uniqueName = StreamHelper.ReadCString(s);
             }
             public override string Dump(int tabs = 0)
             {
                 StringBuilder sb = new StringBuilder();
-                sb.AppendLine(Helper.MakeTabs(tabs + 1) + "Count = " + count +
+                sb.Append(Helper.MakeTabs(tabs + 1) + "Count = " + count +
                           " property = [" + property + "]" +
                           " field = 0x" + field.ToString("X8") +
                           " derived = 0x" + derived.ToString("X8") +
                           " vshape = 0x" + derived.ToString("X8") +
                           " data = " + Helper.MakeHexString(data.data) +
-                          " " + name);
+                          " name: \"" + name + "\"");
+                if (property.hasuniquename)
+                    sb.AppendLine(" uniquename:\"" + uniqueName + "\"");
+                else
+                    sb.AppendLine();
                 return sb.ToString();
             }
         }
@@ -943,7 +993,7 @@ namespace PDBDumpWV
                           "elemtype = 0x" + elemtype.ToString("X8") +
                           " idxtype = 0x" + idxtype.ToString("X8") +
                           " data: " + Helper.MakeHexString(data.data) +
-                          " " + name);
+                          " name: \"" + name + "\"");
                 return sb.ToString();
             }
         }
